@@ -96,11 +96,15 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
     def plot_data(self):
         """Plot data on the graph widget"""
         
-        list_zero, list_one = self.database.data_separation(self.database.get_data()) # split input data by last row value
+        list_zero = list(self.database.data_separate(self.database.get_converted_data()))  # first data class
+        list_one = list(self.database.data_separate(self.database.get_converted_data(), 1))  # second data class
+        list_second = list(self.database.data_separate(self.database.get_converted_data(), 2))  # third data class
 
-        self.graph_widg.plot_first_from_list(list_zero) # blue dots
-        self.graph_widg.plot_second_from_list(list_one) # red dots
-    
+        self.graph_widg.plot_f_d_class_dots(self.database.slice_column(list_zero), self.database.slice_column(list_zero, 2))  # blue dots
+        self.graph_widg.plot_s_d_class_dots(self.database.slice_column(list_one), self.database.slice_column(list_one, 2))  # red dots
+        self.graph_widg.plot_t_d_class_dots(self.database.slice_column(list_second), self.database.slice_column(list_second, 2))  # green dots
+
+
     def calculate_line(self):
         ## TEST 
         db_data=list(self.database.get_data())
@@ -181,13 +185,11 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         
         self.restart_all() # before start new session set up all to start state
 
-        self.database.read_csv(self.filenameInput.text())
+        self.database.read_conv_calc_csv(self.file_inp.text())
         
-        # ouptut on text widget
         self.state_out_widg.addItem(f"{self.database.get_items_count()} input vectors in {self.database.get_items_dimensions()}-dimensional space have been loaded")
 
-        print("--=== Plotting data! ===--")
-        self.plot_data() # graph plot
+        self.plot_data() 
 
     def start_action(self):
         """ Begin action on start button """
