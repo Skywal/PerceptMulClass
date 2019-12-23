@@ -104,7 +104,17 @@ class Database(object):
             L.append(i[(column - 1) : column][0])  #  convert from 1 x n list to n x 1
         
         return L
-
+    
+    def split_data_and_class(self):
+        """ Slice data and class into separate lists. Return d_list, c_list. """
+        d_list = []  # data
+        c_list = []  # classes
+        
+        for i in self.c_file_data:
+            d_list.append(i[:-1])
+            c_list.append(i[-1])
+        
+        return d_list, c_list
 
     def get_data(self):
         """ Get raw data from the file in form of list. """
@@ -128,6 +138,8 @@ class Database(object):
 
 
 if __name__ == "__main__":
+    # Tests
+
     db = Database()
     #db.read_csv("D:/PROJECTS/LABKI/PerceptMulClass/example/sample1.csv")
     db.read_conv_calc_csv("D:/PROJECTS/LABKI/PerceptMulClass/example/sample1.csv")
@@ -137,7 +149,6 @@ if __name__ == "__main__":
 
     #print(db.slice_column(db.get_converted_data(), column=-1))
     
-
     list_zero = list(db.data_separate(db.get_converted_data()))
     list_one = list(db.data_separate(db.get_converted_data(), key_separator=1)) # split input data by last row value
     
@@ -145,7 +156,11 @@ if __name__ == "__main__":
     #print(list_one)
     
     #print(db.slice_column(list_zero))
-    print(db.slice_column(list_zero, 2))
+    #print(db.slice_column(list_zero, 2))
 
     #print(db.slice_column(list_one))
     #print(db.slice_column(list_one, 1))
+    
+    #data, classes = db.split_data_and_class()
+    #print(data)
+    #print(classes)
