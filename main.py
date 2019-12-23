@@ -40,9 +40,9 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
     def init_extern(self):
         """ Initialize all variables from orther modules aka by reference. """
 
-        self.database = db.Database() # create instance of database object to work with .CSV file and data
+        self.database = db.Database() 
         
-        self.setup_graph() # implementing graph output 
+        self.setup_graph(10) # 10 possible data classes
 
 
     def set_up_inputs(self):
@@ -118,6 +118,8 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         
         self.state_out_widg.addItem(f"{self.database.get_items_count()} input vectors in {self.database.get_items_dimensions()}-dimensional space have been loaded")
 
+        #self.setup_graph(len(self.database.get_class_list()))
+
         self.plot_data() 
 
     def start_action(self):
@@ -127,10 +129,10 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         self.neural_sequence()
 
 
-    def setup_graph(self):
+    def setup_graph(self, data_classes):
         """ Initial setup of the graphical output """
 
-        self.graph_widg = graph.Graph()
+        self.graph_widg = graph.Graph(data_classes=data_classes)
         self.graph_layout = QtWidgets.QVBoxLayout(self.graph_w)  # creating layout inside an empty widget
         
         #self.graphic.setParent(None) # delete widget in case of parent reposition
@@ -144,9 +146,9 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         list_one = list(self.database.data_separate(self.database.get_converted_data(), 1))  # second data class
         list_second = list(self.database.data_separate(self.database.get_converted_data(), 2))  # third data class
 
-        self.graph_widg.plot_f_d_class_dots(self.database.slice_column(list_zero), self.database.slice_column(list_zero, 2))  # blue dots
-        self.graph_widg.plot_s_d_class_dots(self.database.slice_column(list_one), self.database.slice_column(list_one, 2))  # red dots
-        self.graph_widg.plot_t_d_class_dots(self.database.slice_column(list_second), self.database.slice_column(list_second, 2))  # green dots
+        self.graph_widg.plot_dots_single_class(sequence_num=0, x=self.database.slice_column(list_zero), y=self.database.slice_column(list_zero, 2))  
+        self.graph_widg.plot_dots_single_class(sequence_num=1, x=self.database.slice_column(list_one), y=self.database.slice_column(list_one, 2))  
+        self.graph_widg.plot_dots_single_class(sequence_num=2, x=self.database.slice_column(list_second), y=self.database.slice_column(list_second, 2))  
 
     def calculate_line(self):
         ## TEST 
@@ -166,7 +168,8 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         return final_line, line_x2
     
     def plot_line(self, x1_arr, x2_arr):
-        self.graph_widg.plot_line(x1_arr, x2_arr)
+        #self.graph_widg.plot_line(0, x1_arr, x2_arr)
+        pass
 
 
     def neuron(self, synapses, max_error, epochs):
