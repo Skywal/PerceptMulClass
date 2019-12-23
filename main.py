@@ -86,12 +86,12 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
     def setup_graph(self):
         """ Initial setup of the graphical output """
 
-        self.graph_widg = graph.Graph() # create instance of the graph class
-        self.graph_layout = QtWidgets.QVBoxLayout(self.graph_w) # creating layout inside an empty widget
+        self.graph_widg = graph.Graph()
+        self.graph_layout = QtWidgets.QVBoxLayout(self.graph_w)  # creating layout inside an empty widget
         
         #self.graphic.setParent(None) # delete widget in case of parent reposition
 
-        self.graph_layout.addWidget(self.graph_widg) # add graph widget insige layout
+        self.graph_layout.addWidget(self.graph_widg)  # add graph widget insige layout
         
     def plot_data(self):
         """Plot data on the graph widget"""
