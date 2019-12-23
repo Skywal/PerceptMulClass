@@ -44,6 +44,7 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         
         self.setup_graph() # implementing graph output 
 
+
     def set_up_inputs(self):
         """ Set text in input boxes at start"""
         self.max_epoch_inp.setText(str(self.max_num_epoch))
@@ -52,7 +53,6 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
 
         self.error_input.setText("")
         self.pass_epochs_inp.setText("")
-
 
     def read_inputs(self):
         """ Read data from active inputs """
@@ -81,6 +81,50 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         # Check boxes
 
         self.rand_weights = self.rand_weights_check_b.isChecked() 
+    
+    def restart_all(self):
+        """ Bring all current state to start state """
+
+        self.state_out_widg.clear() # delete all output
+        
+        self.plot_line([0], [0]) # erase builded line
+        
+        self.init_vars() # reset all global variables
+        self.set_up_inputs() # reset data in active text inputs
+
+    
+    def event_holders(self):
+        """ Bind events """
+
+        self.select_file_button.clicked.connect(self.browse_folder_action) 
+        self.load_file_button.clicked.connect(self.load_data_action)
+        self.start_button.clicked.connect(self.start_action)
+
+    def browse_folder_action(self):
+        """Select file from local disc by button press"""
+
+        self.file_inp.clear() # cleat the line before writing
+        file_name = QtWidgets.QFileDialog.getOpenFileName(self, "Open file")[0]
+
+        if file_name:
+            self.file_inp.setText(str(file_name)) # write a string 
+    
+    def load_data_action(self):
+        """ Open selected file and read the data on Load button press """
+        
+        self.restart_all() # before start new session set up all to start state
+
+        self.database.read_conv_calc_csv(self.file_inp.text())
+        
+        self.state_out_widg.addItem(f"{self.database.get_items_count()} input vectors in {self.database.get_items_dimensions()}-dimensional space have been loaded")
+
+        self.plot_data() 
+
+    def start_action(self):
+        """ Begin action on start button """
+        self.read_inputs()
+
+        self.neural_sequence()
 
 
     def setup_graph(self):
@@ -103,7 +147,6 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         self.graph_widg.plot_f_d_class_dots(self.database.slice_column(list_zero), self.database.slice_column(list_zero, 2))  # blue dots
         self.graph_widg.plot_s_d_class_dots(self.database.slice_column(list_one), self.database.slice_column(list_one, 2))  # red dots
         self.graph_widg.plot_t_d_class_dots(self.database.slice_column(list_second), self.database.slice_column(list_second, 2))  # green dots
-
 
     def calculate_line(self):
         ## TEST 
@@ -164,51 +207,7 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
             self.listWidget.addItem(f"w{i}={self.optimal_weights[i]}")
 
 
-    def event_holders(self):
-        """ Bind events """
-
-        self.select_file_button.clicked.connect(self.browse_folder_action) 
-        self.load_file_button.clicked.connect(self.load_data_action)
-        self.start_button.clicked.connect(self.start_action)
-
-    def browse_folder_action(self):
-        """Select file from local disc by button press"""
-
-        self.file_inp.clear() # cleat the line before writing
-        file_name = QtWidgets.QFileDialog.getOpenFileName(self, "Open file")[0]
-
-        if file_name:
-            self.file_inp.setText(str(file_name)) # write a string 
-    
-    def load_data_action(self):
-        """ Open selected file and read the data on Load button press """
-        
-        self.restart_all() # before start new session set up all to start state
-
-        self.database.read_conv_calc_csv(self.file_inp.text())
-        
-        self.state_out_widg.addItem(f"{self.database.get_items_count()} input vectors in {self.database.get_items_dimensions()}-dimensional space have been loaded")
-
-        self.plot_data() 
-
-    def start_action(self):
-        """ Begin action on start button """
-        self.read_inputs()
-
-        self.neural_sequence()
-
      
-    def restart_all(self):
-        """ Bring all current state to start state """
-
-        self.state_out_widg.clear() # delete all output
-        
-        self.plot_line([0], [0]) # erase builded line
-        
-        self.init_vars() # reset all global variables
-        self.set_up_inputs() # reset data in active text inputs
-        
-
 def main():
 
     app = QtWidgets.QApplication(sys.argv) # new instance of QApplication
