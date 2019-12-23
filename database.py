@@ -1,4 +1,4 @@
-# Class to represent and work with training data.
+# Class to represent and work training data.
 
 import csv
 
@@ -85,14 +85,15 @@ class Database(object):
         return result
 
     def slice_column(self, input_list, column=0):
-        """ Cut entire n column from the n dimensional list into separate list. Work only for n x m list with equal row length. """
+        """ Cut entire n column from the n dimensional list into separate list. Work only for n x m list with equal row length. 
+        column - upped border in slice which will not be taken, so to slice second column from list it should be set 2"""
 
         L=[]
         
         if column <= 0:
             for i in input_list:
             # cut column in row and get value of that list item
-                L.append(i[column][0])  #  convert from n x 1 list to 1 x n
+                L.append(i[column])  
             
             return L
 
@@ -100,7 +101,7 @@ class Database(object):
             column = len(input_list[0])
 
         for i in input_list:
-            L.append(i[(column - 1) : column][0])  
+            L.append(i[(column - 1) : column][0])  #  convert from 1 x n list to n x 1
         
         return L
 
@@ -130,7 +131,21 @@ if __name__ == "__main__":
     db = Database()
     #db.read_csv("D:/PROJECTS/LABKI/PerceptMulClass/example/sample1.csv")
     db.read_conv_calc_csv("D:/PROJECTS/LABKI/PerceptMulClass/example/sample1.csv")
-    data_sep = db.data_separate(db.get_converted_data(), 0)
+    #data_sep = db.data_separate(db.get_converted_data(), 0)
     
-    print(db.slice_column(db.get_converted_data(), column=-1))
-    #db.print_csv()
+    #print(db.get_converted_data())
+
+    #print(db.slice_column(db.get_converted_data(), column=-1))
+    
+
+    list_zero = list(db.data_separate(db.get_converted_data()))
+    list_one = list(db.data_separate(db.get_converted_data(), key_separator=1)) # split input data by last row value
+    
+    #print(list_zero)
+    #print(list_one)
+    
+    #print(db.slice_column(list_zero))
+    print(db.slice_column(list_zero, 2))
+
+    #print(db.slice_column(list_one))
+    #print(db.slice_column(list_one, 1))
