@@ -1,5 +1,6 @@
 # Class to represent and work training data.
 
+import numpy as np
 import csv
 
 
@@ -10,6 +11,10 @@ class Database(object):
         self.file_data = None   # raw data
         self.c_file_data = None  # converted into numbers data
         self.data_classes = None # list of unic classes in file
+        
+        self.numpy_all_cvs = None
+        self.numpy_data = None
+        self.numpy_classes = None
 
 
     def read_csv(self, file_path):
@@ -27,11 +32,14 @@ class Database(object):
         self.convert_f_data()
 
     def read_conv_calc_csv(self, file_path):
-        """ Read data convert it into float and get all unic classes of values in the file. """
+        """ Read data convert it into float and get all unic classes of values in the file. Also transfer all into numpy arrays. """
 
         self.read_convert_csv(file_path=file_path)
         
         self.data_classes = list(self.unic_classes())
+
+        self.convert_csv_to_numpy()
+        self.convert_data_class_to_numpy()
 
 
     def print_csv(self):
@@ -116,6 +124,7 @@ class Database(object):
         
         return d_list, c_list
 
+    
     def get_data(self):
         """ Get raw data from the file in form of list. """
         return self.file_data
@@ -129,12 +138,32 @@ class Database(object):
         return len(self.file_data)
     
     def get_items_dimensions(self):
-        """ Get values dimensions aka [0, 1, ..., n] """
+        """ Get values dimensions aka [0, 1, ..., n] in form of single num 'n'. """
         return len(self.file_data[0][:-1])
     
     def get_class_list(self):
         """ Get unic data classes. """
         return self.data_classes
+
+
+    def convert_csv_to_numpy(self):
+        self.numpy_all_cvs = np.asarray(self.c_file_data, dtype=np.float32)
+    
+    def convert_data_class_to_numpy(self):
+
+        d_list, c_list = self.split_data_and_class()
+
+        self.numpy_data = np.asarray(d_list, dtype=np.float32)
+        self.numpy_classes = np.asarray(c_list, dtype=np.float32)
+
+    def get_numpy_all_csv(self):
+        return self.numpy_all_cvs
+
+    def get_numpy_data(self):
+        return self.numpy_data
+
+    def get_numpy_classes(self):
+        return self.numpy_classes
 
 
 if __name__ == "__main__":
@@ -164,3 +193,4 @@ if __name__ == "__main__":
     #data, classes = db.split_data_and_class()
     #print(data)
     #print(classes)
+    print(db.get_numpy_all_csv())
