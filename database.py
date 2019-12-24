@@ -94,7 +94,7 @@ class Database(object):
 
     def slice_column(self, input_list, column=0):
         """ Cut entire n column from the n dimensional list into separate list. Work only for n x m list with equal row length. 
-        column - upped border in slice which will not be taken, so to slice second column from list it should be set 2"""
+        column - upped border in slice"""
 
         L=[]
         
@@ -105,8 +105,19 @@ class Database(object):
             
             return L
 
-        elif column >= len(input_list[0]):
-            column = len(input_list[0])
+        elif column >= (len(input_list[0])-1):
+            
+            for i in input_list:
+                L.append(i[-1])
+
+            return L
+
+        elif column == 1:
+            
+            for i in input_list:
+                L.append(i[column : column + 1][0])
+            
+            return L
 
         for i in input_list:
             L.append(i[(column - 1) : column][0])  #  convert from 1 x n list to n x 1
@@ -155,7 +166,7 @@ class Database(object):
 
         self.numpy_data = np.asarray(d_list, dtype=np.float32)
         self.numpy_classes = np.asarray(c_list, dtype=np.float32)
-
+    
     def get_numpy_all_csv(self):
         return self.numpy_all_cvs
 
