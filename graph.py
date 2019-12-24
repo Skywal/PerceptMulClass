@@ -84,7 +84,7 @@ class Graph(Qt.QWidget):
     
     def plot_line(self, sequence_num=0, x=[0], y=[0]):
         """ Plot line object from the list at position sequence_num. """
-        print(len(self.line_obj_list))
+        
         self.line_obj_list[sequence_num].setData(x, y)
     
 
