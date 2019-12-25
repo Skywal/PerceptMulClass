@@ -3,7 +3,7 @@ import os
 from PyQt5 import QtWidgets
 import pyqtgraph as pg
 
-from design import perceptron_multi_class as design 
+from design import perceptron_multi_class_rem as design 
 
 import graph
 import database as db
@@ -14,9 +14,9 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
     def __init__(self):
         
         super().__init__()
-        self.setupUi(self) # this needed for initializing of design
+        self.setupUi(self) 
         
-        self.init_vars() # make instance of all global variables for this class
+        self.init_vars() 
         self.init_extern() # initialise all variables from external modules
 
         self.set_up_inputs() # set up start value at active text inputs 
@@ -27,32 +27,33 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
     def init_vars(self):
         """ Initial setup of the global variables. """
 
-        self.max_num_epoch = 1000 
-        self.max_error = 0
-        self.passed_epochs = 0 
-        self.error = 0  # actual error of data evaluation
-        self.learn_rate = 0.1
+        self.max_num_epoch = 30 
+        self.batch_size = 10  # how many times data will change in one training epo before weights will be updated
+        self.accuracy = 0  # actual error of data evaluation
+        self.loss = 0  # loss on datata evaluation
+        self.learn_rate = 0.01
         self.rand_weights = True
 
-        self.optimal_epochs = 0  # epochs passed before optimal weights value was found
-        self.optimal_weights = []  # weights with smallest error 
+        self.optimal_weights = []  
 
     def init_extern(self):
         """ Initialize all variables from orther modules aka by reference. """
 
         self.database = db.Database() 
         
-        self.setup_graph(10) # 10 possible data classes
+        self.setup_graph(10)  # 10 possible data classes
+
+        self.net_manager = n_manager.NetManager()
 
 
     def set_up_inputs(self):
         """ Set text in input boxes at start"""
         self.max_epoch_inp.setText(str(self.max_num_epoch))
-        self.max_error_inp.setText(str(self.max_error))
+        self.batch_size_inp.setText(str(self.batch_size))
         self.learn_rate_inp.setText(str(self.learn_rate))
 
-        self.error_input.setText("")
-        self.pass_epochs_inp.setText("")
+        self.loss_inp.setText("")
+        self.accuracy_inp.setText("")
 
     def read_inputs(self):
         """ Read data from active inputs """
@@ -60,7 +61,7 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         # Text inputs 
 
         epo_txt_inp = self.max_epoch_inp.text()
-        err_txt_inp = self.max_error_inp.text()
+        btc_txt_inp = self.batch_size_inp.text()
         lnr_txt_inp = self.learn_rate_inp.text()
 
         if epo_txt_inp:
@@ -68,10 +69,10 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         else:
             self.max_num_epoch = 0
 
-        if err_txt_inp:
-            self.max_error = float(err_txt_inp)
+        if btc_txt_inp:
+            self.batch_size = int(btc_txt_inp)
         else:
-            self.max_error = 0
+            self.batch_size = 0
         
         if lnr_txt_inp:
             self.learn_rate = float(lnr_txt_inp)
@@ -85,10 +86,10 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
     def restart_all(self):
         """ Bring all current state to start state """
 
-        self.state_out_widg.clear() # delete all output
+        self.state_out_widg.clear() 
         
-        self.plot_line([0], [0]) # erase builded line
-        
+        self.plot_clear()
+
         self.init_vars() # reset all global variables
         self.set_up_inputs() # reset data in active text inputs
 
@@ -118,15 +119,20 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         
         self.state_out_widg.addItem(f"{self.database.get_items_count()} input vectors in {self.database.get_items_dimensions()}-dimensional space have been loaded")
 
-        #self.setup_graph(len(self.database.get_class_list()))
-
         self.plot_data() 
 
     def start_action(self):
         """ Begin action on start button """
         self.read_inputs()
 
+        self.net_manager.set_up_vars(self.learn_rate, self.max_num_epoch, self.rand_weights, self.batch_size, 
+                                    self.database.get_items_dimensions(), len(self.database.get_class_list()))
+
         self.neural_sequence()
+
+        self.text_out(self.optimal_weights)
+
+        self.plot_line()
 
 
     def setup_graph(self, data_classes):
@@ -135,79 +141,68 @@ class PerceptMultClassApp(QtWidgets.QMainWindow, design.Ui_MainWindow):
         self.graph_widg = graph.Graph(data_classes=data_classes)
         self.graph_layout = QtWidgets.QVBoxLayout(self.graph_w)  # creating layout inside an empty widget
         
-        #self.graphic.setParent(None) # delete widget in case of parent reposition
-
         self.graph_layout.addWidget(self.graph_widg)  # add graph widget insige layout
         
     def plot_data(self):
         """Plot data on the graph widget"""
         
-        list_zero = list(self.database.data_separate(self.database.get_converted_data()))  # first data class
-        list_one = list(self.database.data_separate(self.database.get_converted_data(), 1))  # second data class
-        list_second = list(self.database.data_separate(self.database.get_converted_data(), 2))  # third data class
+        for i in range(len(self.database.get_class_list())):
+            coords_list = list(self.database.data_separate(self.database.get_converted_data(), i))
+            
+            self.graph_widg.plot_dots_single_class(sequence_num=i, x=self.database.slice_column(coords_list), y=self.database.slice_column(coords_list, 1))
+             
+    def plot_clear(self):
+        """ Replot all old data on zeros. """
 
-        self.graph_widg.plot_dots_single_class(sequence_num=0, x=self.database.slice_column(list_zero), y=self.database.slice_column(list_zero, 2))  
-        self.graph_widg.plot_dots_single_class(sequence_num=1, x=self.database.slice_column(list_one), y=self.database.slice_column(list_one, 2))  
-        self.graph_widg.plot_dots_single_class(sequence_num=2, x=self.database.slice_column(list_second), y=self.database.slice_column(list_second, 2))  
+        for i in range(self.graph_widg.get_data_cls()):
+            self.graph_widg.plot_dots_single_class(sequence_num=i, x=[0], y=[0])
+            self.graph_widg.plot_line(sequence_num=i, x=[0], y=[0])
 
-    def calculate_line(self):
-        ## TEST 
-        db_data=list(self.database.get_data())
-        line_list = [] # x1 raw
-        
-        for i in range(len(db_data)):
-            line_list.append(db_data[i][0:1])
-        
-        final_line =[] # x1
-        
-        for i in range(len(line_list)):
-            final_line.append(float(line_list[i][0]))
-        
-        line_x2 = (self.net_manager.predict_2d(final_line))
-        
-        return final_line, line_x2
-    
-    def plot_line(self, x1_arr, x2_arr):
-        #self.graph_widg.plot_line(0, x1_arr, x2_arr)
-        pass
+    def plot_line(self):
+        """ Plot line graps. """
 
+        line_x = self.database.get_test_x_arrange()
+        
+        for i in range(len(self.optimal_weights)):
+            
+            weights_slice = self.database.slice_column(self.optimal_weights, i)
+            
+            line_y = self.net_manager.calc_line(weights_slice, line_x)
+            
+            self.graph_widg.plot_line(i, line_x, line_y)
 
-    def neuron(self, synapses, max_error, epochs):
-        
-        self.net_manager = n_manager.NetManager(database=self.database.get_data(), synapses=synapses, max_error=max_error)
-        
-        self.net_manager.train_network(epochs=epochs)
 
     def neural_sequence(self):
         """ Neuron initialuze, train, predict and plot predictions sequence """
 
-        synapses = len(self.database.get_data()[0][:-1]) # how many input data columns are in the list
+        self.net_manager.model_train_evaluate(self.database.get_numpy_data(), self.database.get_numpy_classes())    
 
-        self.neuron(epochs=self.max_num_epoch, max_error=self.max_error, synapses=synapses)
-        
-        if synapses <= 2:
-            x1_arr, x2_arr =self.calculate_line() 
-            self.plot_line(x1_arr, x2_arr)
-        
-        self.passed_epochs = self.net_manager.get_epochs_passed()
-        self.error = self.net_manager.get_error()
-        self.optimal_epochs = self.net_manager.get_opt_epochs()
-        self.optimal_weights = self.net_manager.swap_weights()
+        self.accuracy = self.net_manager.get_accuracy()
+        self.loss = self.net_manager.get_data_loss()
 
-        self.text_out([0])
-    
+        self.optimal_weights = list(self.net_manager.get_model_weights_list())
 
-    def text_out(self, weights=[0]):
+
+    def text_out(self, weights=[[0]]):
         """ Output text-info into all available information outputs """
-        self.errorInput.setText(str(self.error))
-        self.passed_epochsInput.setText(str(self.passed_epochs))
+        str_acc = "{0:.2f}".format(self.accuracy*100)
+        str_loss = "{0:.2f}".format(self.loss*100)
+        str_acc_loss = "Model loss = "+str_loss+" %, model accuracy = "+str_acc+" %"
 
-        self.listWidget.addItem(f"\nMaximum number of epochs = {self.max_num_epoch}, Maximum error = {self.max_error}")
-        self.listWidget.addItem(f"Passed epochs = {self.passed_epochs}, error = {self.error}")
-        self.listWidget.addItem(f"Optimal values ​​of the synaptic weights were found after {self.optimal_epochs} epochs:")
+        self.accuracy_inp.setText(str_acc)
+        self.loss_inp.setText(str_loss)
+
+        self.state_out_widg.addItem(f"\nMaximum number of epochs = {self.max_num_epoch}, batch size = {self.batch_size}")
+        self.state_out_widg.addItem(str_acc_loss)
+        self.state_out_widg.addItem(f"Optimal weights were found for {len(self.database.get_class_list())} data classes:")
         
-        for i in range(len(self.optimal_weights)):
-            self.listWidget.addItem(f"w{i}={self.optimal_weights[i]}")
+        for i in range(len(weights)):
+            
+            wei_slice = self.database.slice_column(weights, i)
+
+            self.state_out_widg.addItem(f"For neuron = {i+1} optimal weights are:")
+            for j in range(len(wei_slice)):
+                self.state_out_widg.addItem(f"w{j}={wei_slice[j]}")
 
 
      

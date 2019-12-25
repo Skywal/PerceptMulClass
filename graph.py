@@ -18,7 +18,7 @@ class Graph(Qt.QWidget):
         
         layout.addWidget(self.view) # show up plot area
         
-        self.init_vars()
+        self.init_vars(data_classes)
 
         self.init_dots_graphs(data_classes=data_classes)
         self.init_line_graphs(data_classes=data_classes)
@@ -39,11 +39,12 @@ class Graph(Qt.QWidget):
         
         return view
     
-    def init_vars(self):
+    def init_vars(self, posible_data_cls):
 
         self.plot_color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w', (9, 59, 198), (215, 145, 5)]
         self.dots_obj_list = []
         self.line_obj_list = []
+        self.data_classes = posible_data_cls
     
 
     def init_line(self, color):
@@ -77,6 +78,9 @@ class Graph(Qt.QWidget):
         """ Get list of all lines. Position corresponds to data class """
         return self.line_obj_list
 
+    def get_data_cls(self):
+        """ Return amount of different graphs. """
+        return self.data_classes
 
     def plot_dots_single_class(self, sequence_num=0, x=[0], y=[0]):
         """ Plot dot object from the list at position sequence_num. """
@@ -84,7 +88,6 @@ class Graph(Qt.QWidget):
     
     def plot_line(self, sequence_num=0, x=[0], y=[0]):
         """ Plot line object from the list at position sequence_num. """
-        
         self.line_obj_list[sequence_num].setData(x, y)
     
 

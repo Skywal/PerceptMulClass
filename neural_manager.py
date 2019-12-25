@@ -15,8 +15,11 @@ import database as db
 
 """Managing neural network work"""
 class NetManager(object):
-    def __init__(self, inp_dims=2, epochs=100, learning_rate=0.001, batch_size=500, rand_weights=True, data_classes=3):
-        
+    def __init__(self, inp_dims=2, epochs=100, learning_rate=0.01, batch_size=500, rand_weights=True, data_classes=3):
+        """ 'inp_dims' -- dimension of input data, 'epochs' -- training epochs, 'learning_rate' -- speed of neural network learns, 
+        'batch_size' -- amount of data after which weights will be updated in one epoch, 'rand_weights' -- randomize initial model weights, 
+        'data_classes' -- amound of different data classes. """
+
         self.init_vars()
         self.set_up_vars(lnr_rate=learning_rate, epo=epochs, rand_weights=rand_weights, 
                         btc_size=batch_size, inp_dims=inp_dims, d_classes=data_classes)
@@ -31,11 +34,11 @@ class NetManager(object):
         self.mod_predict_acc = 0  # model accuracy on predictions
         self.mod_weights = []  # list of all model weights
 
-        self.dummy_y = 0
-        self.X_train = 0
-        self.X_test = 0
-        self.Y_train = 0
-        self.Y_test = 0
+        self.dummy_y = 0  # labels categorized
+        self.X_train = 0  # data
+        self.X_test = 0  # never will be used for training model
+        self.Y_train = 0  # labels
+        self.Y_test = 0  # labels
 
         self.test_size = .2  # percent of all data that will be transfered into test list 
     
@@ -56,12 +59,12 @@ class NetManager(object):
 
     
     def rand_init_weights(self):
-        """ Set up initial weights to random or zeros depending on 'self.rand_weights' variable value. 'True' - random values, 'False' - zeros """
+        """ Set up initial weights to random or zeros depending on 'self.rand_weights' variable value. 'True' - random values, 'False' - glorot normal initializer. """
 
         if self.rand_weights:
             return 'random_uniform'
         else:
-            return 'zeros'
+            return 'glorot_normal'
 
     def form_my_model(self):
         """ Create and return keras Sequential model with 1 Dense layers, with activation 'sigmoid'.
@@ -72,7 +75,7 @@ class NetManager(object):
         model.add(Dense(units=self.data_classes, input_dim=self.init_inp_dim, 
                         activation='sigmoid',
                         bias_initializer=self.rand_init_weights(), 
-                        kernel_initializer=self.rand_init_weights()))
+                        kernel_initializer=self.rand_init_weights(),))
         
         #model.add(Dropout(0.01))  # helps to deal with overfit
 
@@ -170,45 +173,4 @@ class NetManager(object):
 
 if __name__ == "__main__":
     # test
-
-    database = db.Database()
-    database.read_conv_calc_csv("D:/PROJECTS/LABKI/PerceptMulClass/example/sample1.csv")
-    
-    csv_list = database.get_numpy_all_csv()
-    print(csv_list)
-    #print(database.get_items_dimensions())
-    print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
-    data_list = database.get_numpy_data()
-    class_list = database.get_numpy_classes()
-
-    net_manager = NetManager(inp_dims=database.get_items_dimensions(), epochs=30, batch_size=10, rand_weights=True)
-
-    net_manager.model_train_evaluate(data_list, class_list)
-    
-    print("\nModel weights after")
-    #wei_after = net_manager.get_model_weights()
-    #for i in wei_after:
-    #    print(i)
-    #print("\n")
-    print("++++++++++++++++++++")
-    #print(net_manager.get_l0_weights())
-    print("------------------------")
-    #print(net_manager.get_l0_bias())
-    print("\n")
-
-    arr = [[-4.438424802704748, -6.5223773600741834], ## 0
-     [-3.085393136916536,-4.820753879421525], ## 0
-     [11.102347458781438,1.4715952203420422], ## 1
-     [6.205164330259273,-13.453352092582335]] ## 2
-    pred_data = np.asarray([[6.205164330259273,-13.453352092582335]], dtype=np.float32)
-    print(pred_data)
-    predictions = net_manager.get_class_prediction(pred_data)
-    #predictions = net_manager.get_prediction(pred_data)
-    print(predictions)
-    print("***************************************")
-
-    for i in net_manager.get_model_weights_list():
-        print(i)
-
-    print("++++++++++")
-    print(net_manager.get_model_weights())
+    pass

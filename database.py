@@ -120,7 +120,7 @@ class Database(object):
             return L
 
         for i in input_list:
-            L.append(i[(column - 1) : column][0])  #  convert from 1 x n list to n x 1
+            L.append(i[(column - 1) : column][0])  #  convert from n x 1 list to 1 x n
         
         return L
     
@@ -176,32 +176,10 @@ class Database(object):
     def get_numpy_classes(self):
         return self.numpy_classes
 
+    def get_test_x_arrange(self):
+        return np.arange(-10.0, 10.0, 0.2)
+
 
 if __name__ == "__main__":
     # Tests
-
-    db = Database()
-    #db.read_csv("D:/PROJECTS/LABKI/PerceptMulClass/example/sample1.csv")
-    db.read_conv_calc_csv("D:/PROJECTS/LABKI/PerceptMulClass/example/sample1.csv")
-    #data_sep = db.data_separate(db.get_converted_data(), 0)
-    
-    #print(db.get_converted_data())
-
-    #print(db.slice_column(db.get_converted_data(), column=-1))
-    
-    list_zero = list(db.data_separate(db.get_converted_data()))
-    list_one = list(db.data_separate(db.get_converted_data(), key_separator=1)) # split input data by last row value
-    
-    #print(list_zero)
-    #print(list_one)
-    
-    #print(db.slice_column(list_zero))
-    #print(db.slice_column(list_zero, 2))
-
-    #print(db.slice_column(list_one))
-    #print(db.slice_column(list_one, 1))
-    
-    #data, classes = db.split_data_and_class()
-    #print(data)
-    #print(classes)
-    print(db.get_numpy_all_csv())
+    pass
