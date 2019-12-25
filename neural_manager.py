@@ -1,173 +1,214 @@
-from network_core import neuron
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import Dropout
+from keras.utils import np_utils
+from keras.utils import plot_model
+from keras import optimizers
+
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_auc_score
+
+import numpy as np
 
 import database as db
 
 
-"""Managing network work"""
+"""Managing neural network work"""
 class NetManager(object):
-    def __init__(self, database, synapses=0, stat_weight=0, learning_rate=1, max_error=.0):
-
-        self.init_vars() # initialise variables
-         
-        self.trans_to_fl(database) # transform data from strings to floats
-
-        self.neuron = neuron.Neuron(synapses=synapses, stat_weight=stat_weight, 
-                                    learning_rate=learning_rate, max_error=max_error)
+    def __init__(self, inp_dims=2, epochs=100, learning_rate=0.001, batch_size=500, rand_weights=True, data_classes=3):
         
+        self.init_vars()
+        self.set_up_vars(lnr_rate=learning_rate, epo=epochs, rand_weights=rand_weights, 
+                        btc_size=batch_size, inp_dims=inp_dims, d_classes=data_classes)
 
-    def init_vars(self):
+        
+    def init_vars(self, ):
         """ Initialise global variables """
-        self.train_history = []
-        self.database = []
+        self.model = None
 
-        self.epochs_passed = 0
+        self.mod_loss = 0  #  model loss based on evaluation
+        self.mod_accuracy = 0  # model accuracy based on evaluation (*100 to get percents)
+        self.mod_predict_acc = 0  # model accuracy on predictions
+        self.mod_weights = []  # list of all model weights
 
-        self.optimal_error = 0
-        self.optimal_epochs = 0
-        self.optimal_weights = []
+        self.dummy_y = 0
+        self.X_train = 0
+        self.X_test = 0
+        self.Y_train = 0
+        self.Y_test = 0
 
-    def cut_data(self, row = 0):
-        """Return list of all column in a row except last one and return value in the last column as separate var"""
-        d_list = list(self.database[row][:-1]) # cut all columns before last from database            
-        out_sig = int(self.database[row][-1]) # get value from the last column
+        self.test_size = .2  # percent of all data that will be transfered into test list 
+    
+    def set_up_vars(self, lnr_rate, epo, rand_weights, btc_size, inp_dims, d_classes):
         
-        return d_list, out_sig
+        self.batch_size = btc_size
+        self.epochs = epo
+        self.lnr_rate = lnr_rate
+        self.rand_weights = rand_weights
+        self.init_inp_dim = inp_dims
+        self.data_classes = d_classes
+
+    def init_model(self):
+        """ Initialise Adam optimizer and create and compile keras Sequential model. """
+        self.adam_opt = optimizers.Adam(learning_rate=self.lnr_rate)
+
+        self.model = self.form_my_model() 
 
     
-    def form_history_line(self, neuron_weights, current_error, epoch):
-        """ Form one line of train history log in format
-            [n_w1, n_w2, ... , n_w3, cur_err, epoch]"""
+    def rand_init_weights(self):
+        """ Set up initial weights to random or zeros depending on 'self.rand_weights' variable value. 'True' - random values, 'False' - zeros """
 
-        line = list(neuron_weights)
-        line.append(current_error)
-        line.append(epoch)
+        if self.rand_weights:
+            return 'random_uniform'
+        else:
+            return 'zeros'
 
-        return line
-
-    def write_history(self, neuron_w, curr_err, epoch):
-        self.train_history.append(self.form_history_line(neuron_w, curr_err, epoch))
-    
-    def trans_to_fl(self, database):
-        """ Transform all data from database input into float nums """
-        for i in database:
-            self.database.append([float(j) for j in i])
-
-    def get_epochs_passed(self):
-        return self.epochs_passed
-
-    def get_error(self):
-        return self.optimal_error
-
-    def get_optimal_weights(self):
-        return self.optimal_weights
-    
-    def get_opt_epochs(self):
-        return self.optimal_epochs
-
-    def swap_weights(self):
-        """ Swaps items in optimal_weights list to normal positions [w_0, w_1, ..., w_n]"""
-        w = list()
-        n_weights = self.optimal_weights
-
-        w.append(n_weights[-1])
-
-        for i in range(len(n_weights)-1):
-            w.append(n_weights[i])
+    def form_my_model(self):
+        """ Create and return keras Sequential model with 1 Dense layers, with activation 'sigmoid'.
+        Number neurons depends on 'data_classes' variable and input depends on 'init_inp_dim'.
+        Loss function - 'categorical_crossentropy', optimizer is 'adam_opt' and mertics are 'categorical_accuracy'. """
         
-        return w
-
-
-    def neuron_act(self, input_data):
-        """ Single neuron thinking act """
-        self.neuron.adder_process(input_data)
-        self.neuron.heviside_activation()
-
-    def predict_2d(self, arr_x1):
-        """Make prediction about arr_x2 on base of arr_x1. Works only for two dimensions"""
-        arr_x2 = [] # result
+        model = Sequential()
+        model.add(Dense(units=self.data_classes, input_dim=self.init_inp_dim, 
+                        activation='sigmoid',
+                        bias_initializer=self.rand_init_weights(), 
+                        kernel_initializer=self.rand_init_weights()))
         
-        w = self.swap_weights()
+        #model.add(Dropout(0.01))  # helps to deal with overfit
 
-        for i in arr_x1:
-            equation = (-1) * ((w[1] * i)/w[2]) - (w[0] / w[2])
-            arr_x2.append(equation)
+        model.compile(loss='categorical_crossentropy', optimizer=self.adam_opt, metrics=['categorical_accuracy'])
+
+        return model
+
+
+    def make_dummy_y(self, class_list):
+        # because it's a multiclass problem labels should be transformed into the categorical format
+        self.dummy_y = np_utils.to_categorical(class_list)
+
+    def make_train_test_data(self, data_list, class_list):
+        """ Split and prepare input data. Size of '_test' set depends on 'test_size' in percents. """
+        self.make_dummy_y(class_list)
+
+        self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(data_list, self.dummy_y, test_size=self.test_size)
+
+
+    def model_train_evaluate(self, data_list, class_list):
+        """ Train and evaluate model. """
+        self.init_model()
         
-        return arr_x2
+        self.make_train_test_data(data_list, class_list)
 
-    def train_network(self, epochs=0):
-        """ Train neuron on data from file for n epochs """
-        curr_ep = 0
+        self.model.fit(x=self.X_train, y=self.Y_train, 
+                       batch_size=self.batch_size, 
+                       epochs=self.epochs, 
+                       shuffle=False,
+                       validation_data=(self.X_test, self.Y_test), 
+                       verbose=1)
+
+        self.mod_loss, self.mod_accuracy = self.model.evaluate(self.X_test, self.Y_test, verbose=0)
+        self.predict_and_estimate()
         
-        while curr_ep < epochs:
-            # reboot error state
-            self.neuron.curr_error = 0
+        self.model.predict_proba(self.X_test)
 
-            for i in range(len(self.database)):
-                data_list, output_signal = self.cut_data(i)
-
-                self.neuron_act(data_list)
+        plot_model(self.model, to_file="model.png")  # plot model structure
                 
-                self.neuron.fit_weights(input_data=data_list, output_signal=output_signal)
+    def predict_and_estimate(self):
+        """ Make prediction on '_test' set and estimate prediction accuracy. """
+        self.prediction = self.model.predict_proba(self.X_test)
+        self.mod_predict_acc = roc_auc_score(y_true=self.Y_test, y_score=self.prediction)
 
-                self.neuron.error_calc(output_signal)
-            
-            # logging parameters
-            self.write_history(self.neuron.get_weights(), self.neuron.curr_error, curr_ep)
-            
-            # if error is smaller than we need there is no sence to continue training
-            if self.neuron.curr_error <= self.neuron.max_error:
-                # save state
-                self.optimal_error = self.neuron.curr_error
-                self.epochs_passed = curr_ep
-
-                print(f"Optimal weights were found after {curr_ep} epochs.")
-                break
-            
-            curr_ep = curr_ep + 1
-        
-        # save state
-        self.epochs_passed = curr_ep
-
-        self.set_up_opimal_val()
     
-    def set_up_opimal_val(self):
-        """ Seeking list item with the smallest error and setting up 
-        optimal walues for current training configuration""" 
+    def calc_line(self, weights=[0], data=[0]):
+        """ Calculate dots of trand line for 'data' 1-dim list of dots. 'weights' is a list of model weights for data class of 'data' list. Return list."""
+        a = round(float(weights[1]), 4)  # weight for input x_1
+        b = round(float(weights[2]), 4)  # weight for input x_2
+        c = round(float(weights[0]), 4)  # bias weight
 
-        l = self.find_optimal_values()
-
-        self.optimal_error = l[-2]
-        self.optimal_epochs = l[-1]
-        self.optimal_weights = l[:-2]
-
-    def find_optimal_values(self):
-        """ Find optimal values of neuron weights
-        Return result in format [w_n, ..., w_1, w_0, error, epoch]
-        """
-        temp_l = []
-        for i in self.train_history:
-            temp_l.append(i[-2:-1])
+        result = []
         
-        min_val = min(temp_l)
-        index_min = temp_l.index(min_val)
+        for i in data:
+            equation = (-1.0)*((a * float(i)) + c) / (b)
+            result.append(equation)
+        return result
 
-        return list(self.train_history[index_min])
+
+    def get_class_prediction(self, x):
+        """ Get single set of data class prediction. """
+        return self.model.predict_classes(x)
+
+    def get_prediction(self, x):
+        """ Get prediction for a list. """
+        return self.model.predict(x)
+
+    def get_model_weights(self):
+        """ Get weights from the model layers. First is kernel matrix, last are biases. Columns are Neurons and rows are inputs, last vector is bias. All data is numpy array. """ 
+        for layer in self.model.layers:
+            weights = layer.get_weights()
+        return weights
+
+    def get_model_weights_list(self):
+        """ Get all weights from model in form of single list [[w0_1, w0_2, ..., w0_n] [w1_1, w1_2, ..., w1_n] [wn_1, wn_2, ..., wn_n]] """
+        weig = self.get_model_weights()
+               
+        result = []
+        
+        result.append(weig[1].tolist())  # get bias weights 
+        # get all other weights 
+        for i in weig[0]:
+            result.append(i.tolist())
+
+        return result
+
+    def get_accuracy(self):
+        """ Model prediction accuracy. """
+        return self.mod_predict_acc
+    
+    def get_data_loss(self):
+        """ Model data loss on dataset evaluation. """
+        return self.mod_loss
+    
 
 if __name__ == "__main__":
+    # test
 
     database = db.Database()
-    database.read_csv("")
+    database.read_conv_calc_csv("D:/PROJECTS/LABKI/PerceptMulClass/example/sample1.csv")
     
-    net_manager = NetManager(database=database.get_data(), synapses=3, max_error=0)
+    csv_list = database.get_numpy_all_csv()
+    print(csv_list)
+    #print(database.get_items_dimensions())
+    print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
+    data_list = database.get_numpy_data()
+    class_list = database.get_numpy_classes()
+
+    net_manager = NetManager(inp_dims=database.get_items_dimensions(), epochs=30, batch_size=10, rand_weights=True)
+
+    net_manager.model_train_evaluate(data_list, class_list)
     
-    net_manager.train_network(epochs=1000)
-    ''
-    print(net_manager.find_optimal_values())
-    print("All epochs", net_manager.get_epochs_passed())
-    print("Error ", net_manager.get_error())
-    print("Opt epochs ", net_manager.get_opt_epochs())
-    print("Opt weights ", net_manager.get_optimal_weights())
-    print(" ")
-    
-    for i in net_manager.neuron.get_synapses():
-        print(f"neuron num has weight {i.get_weight()}")
+    print("\nModel weights after")
+    #wei_after = net_manager.get_model_weights()
+    #for i in wei_after:
+    #    print(i)
+    #print("\n")
+    print("++++++++++++++++++++")
+    #print(net_manager.get_l0_weights())
+    print("------------------------")
+    #print(net_manager.get_l0_bias())
+    print("\n")
+
+    arr = [[-4.438424802704748, -6.5223773600741834], ## 0
+     [-3.085393136916536,-4.820753879421525], ## 0
+     [11.102347458781438,1.4715952203420422], ## 1
+     [6.205164330259273,-13.453352092582335]] ## 2
+    pred_data = np.asarray([[6.205164330259273,-13.453352092582335]], dtype=np.float32)
+    print(pred_data)
+    predictions = net_manager.get_class_prediction(pred_data)
+    #predictions = net_manager.get_prediction(pred_data)
+    print(predictions)
+    print("***************************************")
+
+    for i in net_manager.get_model_weights_list():
+        print(i)
+
+    print("++++++++++")
+    print(net_manager.get_model_weights())
